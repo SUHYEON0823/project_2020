@@ -13,6 +13,9 @@ import Footer from './Footer/Footer';
 // login
 import LoginForm from './LoginForm';
 
+// admin floatingPopulationList
+import floatingPopulationList from './Floating_population/floatingPopulationList';
+
 // admin softwareinfo
 import SoftwareList from './SoftwareToolsManage/SoftwareList';
 import SoftwareView from './SoftwareToolsManage/SoftwareView';
@@ -23,7 +26,9 @@ class App extends Component {
       <div className="App">
           <HeaderAdmin/> 
           <Switch>
+            {/* <Route exact path='/' component={Api_test} /> // root 경로일 경우 라우팅 */}
             <Route exact path='/' component={LoginForm} />
+            <Route path='/floatPopulationList' component={floatingPopulationList} />
             <Route path='/SoftwareList' component={SoftwareList} />
             <Route path='/SoftwareView/:swtcode' component={SoftwareView} />
           </Switch>

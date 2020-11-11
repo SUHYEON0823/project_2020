@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import {Link} from 'react-router-dom';
 import axios from "axios";
+import Swal from 'sweetalert2'
 
 class SoftwareList extends Component {
     constructor(props) {
@@ -60,12 +61,47 @@ class SoftwareList extends Component {
         return result
     }
 
+    deleteSwtool = (e) => {
+        var event_target = e.target
+        this.sweetalertDelete('정말 삭제하시겠습니까?', function() {
+            axios.post('/api/Swtool?type=delete', {
+                is_SwtCd : event_target.getAttribute('id')
+            })
+            .then( response => {
+                this.callSwToolListApi()
+            }).catch( error => {alert('작업중 오류가 발생하였습니다.');return false;} );
+        }.bind(this))
+    }
+
+    sweetalertDelete = (title, callbackFunc) => {
+        Swal.fire({
+            title: title,
+            text: "",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes'
+          }).then((result) => {
+            if (result.value) {
+              Swal.fire(
+                'Deleted!',
+                '삭제되었습니다.',
+                'success'
+              )
+            }else{
+                return false;
+            }
+            callbackFunc()
+          })
+    }
+
     render () {
         return (
             <section class="sub_wrap" >
                 <article class="s_cnt mp_pro_li ct1 mp_pro_li_admin">
                     <div class="li_top">
-                        <h2 class="s_tit1">교내 Software 목록</h2>
+                        <h2 class="s_tit1">Software Tools 목록</h2>
                         <div class="li_top_sch af">
                         <Link to={'/SoftwareView/register'} className="sch_bt2 wi_au">Tool 등록</Link>
                         </div>

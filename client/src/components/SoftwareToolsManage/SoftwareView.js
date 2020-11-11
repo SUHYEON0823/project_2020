@@ -1,7 +1,214 @@
 import React, { Component } from 'react';
 import {Link} from 'react-router-dom';
+import axios from "axios";
+import $ from 'jquery';
+import Swal from 'sweetalert2'
 
 class SoftwareView extends Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            before_swtcode: props.match.params.swtcode,
+            selectedFile: null,
+        }
+    }
+
+    componentDidMount () {
+        if(this.state.before_swtcode == 'register'){
+            $('.modifyclass').hide()
+        }else{
+            this.callSwToolInfoApi()
+            $('.saveclass').hide()
+        }
+    }
+
+    callSwToolInfoApi = async () => {
+        axios.post('/api/Swtool?type=list', {
+            is_Swtcode: this.state.before_swtcode,
+        })
+        .then( response => {
+            try {
+                var data = response.data.json[0]
+                $('#is_Swt_toolname').val(data.swt_toolname)
+                $('#is_Swt_demo_site').val(data.swt_demo_site)
+                $('#is_Giturl').val(data.swt_github_url)
+                $('#is_Comments').val(data.swt_comments)
+                $('#is_Swt_function').val(data.swt_function)
+                try {
+                    var manualName = data.swt_manual_path.replace('/swmanual/','')
+                    var fileName = data.swt_big_imgpath.replace('/image/','')
+                    var fileName2 = data.swt_imagepath.replace('/image/','')
+                } catch (error) {}
+                $('#upload_img').prepend('<img id="uploadimg" src="'+data.swt_big_imgpath+'"/>')
+                $('#upload_img2').prepend('<img id="uploadimg2" src="'+data.swt_imagepath+'"/>')
+
+                $('#imagefile').val(fileName)
+                $('#imagefile2').val(fileName2)
+                $('#manualfile').val(manualName)
+
+                if($('#uploadimg').attr('src').indexOf("null") > -1){
+                    $('#uploadimg').hide()
+                }
+                if($('#uploadimg2').attr('src').indexOf("null") > -1){
+                    $('#uploadimg2').hide()
+                }
+            } catch (error) {
+                alert('작업중 오류가 발생하였습니다.')
+            }
+        })
+        .catch( error => {alert('작업중 오류가 발생하였습니다.');return false;} );
+    }
+
+    submitClick = async (type, e) => {
+
+        this.Swt_toolname_checker = $('#is_Swt_toolname').val();
+        this.Swt_demo_site_checker = $('#is_Swt_demo_site').val();
+        this.Giturl_checker = $('#is_Giturl').val();
+        this.Comments_checker = $('#is_Comments').val();
+        this.Swt_function_checker = $('#is_Swt_function').val();
+
+        this.fnValidate = (e) => {
+            if(this.Swt_toolname_checker === '') {
+                $('#is_Swt_toolname').addClass('border_validate_err');
+                alert('툴 이름을 다시 확인해주세요.')
+                return false;
+            }
+            $('#is_Swt_toolname').removeClass('border_validate_err');
+
+            if(this.Swt_demo_site_checker === '') {
+                $('#is_Swt_demo_site').addClass('border_validate_err');
+                alert('데모 URL을 다시 확인해주세요.')
+                return false;
+            }
+            $('#is_Swt_demo_site').removeClass('border_validate_err');
+
+            if(this.Giturl_checker === '') {
+                $('#is_Giturl').addClass('border_validate_err');
+                alert('Github URL을 다시 확인해주세요.')
+                return false;
+            }
+            $('#is_Giturl').removeClass('border_validate_err');
+
+            if(this.Comments_checker === '') {
+                $('#is_Comments').addClass('border_validate_err');
+                alert('설명을 다시 확인해주세요.')
+                return false;
+            }
+            $('#is_Comments').removeClass('border_validate_err');
+
+            if(this.Swt_function_checker === '') {
+                $('#is_Swt_function').addClass('border_validate_err');
+                alert('상세기능을 다시 확인해주세요.')
+                return false;
+            }
+            $('#is_Swt_function').removeClass('border_validate_err');
+            return true;
+        }
+
+        if(this.fnValidate()){
+            var jsonstr = $("form[name='frm']").serialize();
+            jsonstr = decodeURIComponent(jsonstr);
+            var Json_form = JSON.stringify(jsonstr).replace(/\"/gi,'')
+            Json_form = "{\"" +Json_form.replace(/\&/g,'\",\"').replace(/=/gi,'\":"')+"\"}";
+        
+            try {
+                const response = await fetch('/api/Swtool?type='+type, {
+                    method: 'POST',
+                    headers: {
+                    'Content-Type': 'application/json',
+                    },
+                    body: Json_form,
+                });
+                const body = await response.text();
+                if(body == "succ"){
+                    if(type == 'save'){
+                        this.sweetalertSucc('Software Tools 등록이 완료되었습니다.', false)
+                    }else if(type == "modify"){
+                        this.sweetalertSucc('Software Tools 수정이 완료되었습니다.', false)
+                    }
+                    setTimeout(function() {
+                        this.props.history.push('/SoftwareList');
+                        }.bind(this),1500
+                    );
+                }else{
+                    alert('작업중 오류가 발생하였습니다.')
+                }  
+            } catch (error) {
+                alert('작업중 오류가 발생하였습니다.')
+            }
+        }
+    };
+
+    sweetalertSucc = (title, showConfirmButton) => {
+        Swal.fire({
+            position: 'bottom-end',
+            icon: 'success',
+            title: title,
+            showConfirmButton: showConfirmButton,
+            timer: 1000
+        })
+    }
+
+    handleFileInput(type, e){
+        if(type =='file'){
+            $('#imagefile').val(e.target.files[0].name)
+        }else if(type =='file2'){
+            $('#imagefile2').val(e.target.files[0].name)
+        }else if(type =='manual'){
+            $('#manualfile').val(e.target.files[0].name)
+        }
+        this.setState({
+          selectedFile : e.target.files[0],
+        })
+        setTimeout(function() {
+            if(type =='manual'){
+                this.handlePostMenual()
+            }else{
+                this.handlePostImage(type)
+            }
+        }.bind(this),1
+        );
+    }
+
+    handlePostMenual(){
+        const formData = new FormData();
+        formData.append('file', this.state.selectedFile);
+        return axios.post("/api/upload?type=uploads/swmanual/", formData).then(res => {
+            this.setState({menualName : res.data.filename})
+            $('#is_MenualName').remove()
+            $('#upload_menual').prepend('<input id="is_MenualName" type="hidden"'
+            +'name="is_MenualName" value="/swmanual/'+this.state.menualName+'"}/>')
+        }).catch(error => {
+            alert('작업중 오류가 발생하였습니다.', error, 'error', '닫기')
+        })
+    }    
+
+    handlePostImage(type){
+        const formData = new FormData();
+        formData.append('file', this.state.selectedFile);
+        return axios.post("/api/upload?type=uploads/image/", formData).then(res => {
+            if(type =='file'){
+                this.setState({fileName : res.data.filename})
+                $('#is_MainImg').remove()
+                $('#uploadimg').remove()
+                $('#upload_img').prepend('<img id="uploadimg" src="/image/'
+                +this.state.fileName+'"/>')
+                $('#upload_img').prepend('<input id="is_MainImg" type="hidden"'
+                +'name="is_MainImg" value="/image/'+this.state.fileName+'"}/>')
+            }else if(type =='file2'){
+                this.setState({fileName2 : res.data.filename})
+                $('#is_LabelImg').remove()
+                $('#uploadimg2').remove()
+                $('#upload_img2').prepend('<img id="uploadimg2" src="/image/'
+                +this.state.fileName2+'"/>')
+                $('#upload_img2').prepend('<input id="is_LabelImg" type="hidden"'
+                +'name="is_LabelImg" value="/image/'+this.state.fileName2+'"}/>')
+            }
+        }).catch(error => {
+            alert('작업중 오류가 발생하였습니다.')            
+        })
+    }
+
     render () {
         return (
             <section class="sub_wrap">
@@ -13,7 +220,7 @@ class SoftwareView extends Component {
                         <form name="frm" id="frm" action="" onsubmit="" method="post" >
                             <input id="is_Swtcode" type="hidden" name="is_Swtcode" />
                             <input id="is_Email" type="hidden" name="is_Email" value="guest" />
-                            <input id="is_beforeSwtcode" type="hidden" name="is_beforeSwtcode" value="" />
+                            <input id="is_beforeSwtcode" type="hidden" name="is_beforeSwtcode" value={this.state.before_swtcode} />
                             <article class="res_w">
                                 <p class="ment" style={{"text-align": "right"}}>
                                     <span class="red">(*)</span>표시는 필수입력사항 입니다.
